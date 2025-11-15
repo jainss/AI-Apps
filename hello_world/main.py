@@ -1,12 +1,15 @@
-from google import genai
+from openai import OpenAI
 
-client = genai.Client(
-    api_key="AIzaSyCEtNm8U7udOJ-vu8Ggr5OhbHySLwu78K8"
+client = OpenAI(
+    api_key="AIzaSyCEtNm8U7udOJ-vu8Ggr5OhbHySLwu78K8",
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
-response = client.models.generate_content(
+response = client.chat.completions.create(
     model= "gemini-2.5-flash",
-    contents= "Hello There! what is 2+2?"
+    messages=[
+        {"role": "user", "content": "Hello There!"}
+    ]
 )
 
-print(response.text)
+print(response.choices[0].message.content)
