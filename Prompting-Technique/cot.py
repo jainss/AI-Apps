@@ -28,12 +28,28 @@ SYSTEM_PROMT = """
      PLAN: {"step": "PLAN", "content": "Finally, add 2 and 1.5 to get the final answer 3.5."}
      OUTPUT: {"step": "OUTPUT", "content": "The final answer is 3.5."}
 """
-response = client.chat.completions.create(
-    model="gemini-2.5-flash",
-    messages=[
-        {"role": "system", "content": SYSTEM_PROMT},
-        {"role": "user", "content": "Hey, Write a code to add n number in js"},
-    ]
-)
 
-print(response.choices[0].message.content)
+message_history = [
+    {"role": "system", "content": SYSTEM_PROMT},
+]
+
+user_query = input("Enter your question: ")
+message_history.append({"role": "user", "content": user_query})
+
+while True:
+    response = client.chat.completions.create(
+        model="gemini-2.5-flash",
+        messages=message_history
+    )
+    
+    raw_result = response.choices[0].message.content
+    message_history.append({"role": "assistant", "content": raw_result})
+    
+    parshed_result = json.loads(raw_result)
+    if parshed_result.get("step") == "START":
+        print("Planning started...")
+    if parshed_result.get("step") == "PLAN":
+        print("Planning:", parshed_result["content"])  
+    if parshed_result.get("step") == "OUTPUT":
+        print("Final Answer:", parshed_result["content"])
+        break
