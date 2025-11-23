@@ -4,12 +4,18 @@ from dotenv import load_dotenv
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
+import os
 
 load_dotenv()
 client = OpenAI(
     api_key="AIzaSyCEtNm8U7udOJ-vu8Ggr5OhbHySLwu78K8",
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
+
+def run_command(cmd: str):
+    result = os.system(cmd)
+    return result
+    
 
 def get_weather(city: str):
     url = f"https://wttr.in/{city}?format=%C+%t"
@@ -21,7 +27,8 @@ def get_weather(city: str):
         return f'The weather in {city} is: + {response.text}'
     
 available_tools = {
-    "get_weather": get_weather
+    "get_weather": get_weather,
+    "run_command": run_command
 }
 
 SYSTEM_PROMT = """
@@ -41,7 +48,8 @@ SYSTEM_PROMT = """
      {"step": "STRAT" | "PLAN" | "OUTPUT" | "TOOL", "content": "string", "tool": "string", "input": "string"}
      
      Available Tools:
-     - get_weather: Tales a city name as input and returns the current weather information for that city.
+     - get_weather(city: str): Tales a city name as input and returns the current weather information for that city.
+     - run_command(cmd: str): Takes a systme linux command as input and executes it on the system, returning the output from that command.
      
      Example 1:
      START: Hey, Can you solve 2+3*5/10
@@ -58,6 +66,12 @@ SYSTEM_PROMT = """
         PLAN: {"step": "PLAN", "content": "I will call the get_weather tool with 'New York City' as the input."}
         PLAN: {"step": "PLAN", "content": "Once I get the weather information, I will provide it in the final answer."}
         TOOL: {"step": "TOOL", "content": "get_weather('New York City')"}
+        
+     Example 3:
+        START: Can you list the files in the current directory?
+            PLAN: {"step": "PLAN", "content": "To list the files in the current directory, I will use the run_command tool."}
+            PLAN: {"step": "PLAN", "content": "The command to list files is 'ls'."}
+            TOOL: {"step": "TOOL", "content": "run_command('ls')"}
         
 """
 
