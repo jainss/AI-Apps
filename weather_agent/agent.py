@@ -2,7 +2,8 @@ import requests
 from openai import OpenAI
 from dotenv import load_dotenv
 import json
-
+from pydantic import BaseModel, Field
+from typing import Optional
 
 load_dotenv()
 client = OpenAI(
@@ -60,6 +61,13 @@ SYSTEM_PROMT = """
         
 """
 
+class MyoutputFormate(BaseModel):
+    step: str = Field(..., description="The ID of the step. Examples: PLAN, TOOL, OUTPUT")
+    content: Optional[str] = Field(None, description="The content of the step.")
+    tool: Optional[str] = Field(None, description="The Id of the tool to be called.")
+    input: Optional[str] = Field(None, description="The input to be provided to the tool.")
+    output: Optional[str] = Field(None, description="The output from the tool.")
+
 message_history = [
     {"role": "system", "content": SYSTEM_PROMT},
 ]
@@ -69,22 +77,24 @@ while True:
     message_history.append({"role": "user", "content": user_query})
 
     while True:
-        response = client.chat.completions.create(
+        response = client.chat.completions.parse(
             model="gemini-2.5-flash",
+            response_format=MyoutputFormate,
             messages=message_history
         )
         
         raw_result = response.choices[0].message.content
         message_history.append({"role": "assistant", "content": raw_result})
         
-        parshed_result = json.loads(raw_result)
-        if parshed_result.get("step") == "START":
+        parsed_result = response.choices[0].message.parsed
+        
+        if parsed_result.step == "START":
             print("Planning started...")
-        if parshed_result.get("step") == "PLAN":
-            print("Planning:", parshed_result["content"])
-        if parshed_result.get("step") == "TOOL":
-            tool_to_call = parshed_result.get("tool")
-            tool_input = parshed_result.get("input")
+        if parsed_result.step == "PLAN":
+            print("Planning:", parsed_result.content)
+        if parsed_result.step == "TOOL":
+            tool_to_call = parsed_result.tool
+            tool_input = parsed_result.input
             print("Invoking Tool...")
             tool_output = available_tools[tool_to_call](tool_input)
             print(f"Tool Output: {tool_output}")
@@ -98,6 +108,6 @@ while True:
                 })
             })
             continue
-        if parshed_result.get("step") == "OUTPUT":
-            print("Final Answer:", parshed_result["content"])
+        if parsed_result.step == "OUTPUT":
+            print("Final Answer:", parsed_result.content)
             break
